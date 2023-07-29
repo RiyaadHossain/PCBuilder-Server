@@ -18,46 +18,47 @@ const client = new MongoClient(process.env.MONGODB_URI, {
 const run = async () => {
   try {
     const db = client.db('PC-Builder');
-    const bookCollection = db.collection('books');
-    const wishlistCollection = db.collection('wishlists');
-    const readlistCollection = db.collection('readlists');
+    const categoryCollection = db.collection('categories');
+    const productCollection = db.collection('products');
 
-    app.get('/books', async (req, res) => {
-      const cursor = bookCollection.find({}).sort({ publicationDate: -1 });
-      const book = await cursor.toArray();
+    app.get('/products', async (req, res) => {
+      const cursor = productCollection.find({}).sort({ publicationDate: -1 });
+      const products = await cursor.toArray();
 
-      res.send({ status: true, data: book });
+      res.send({ status: true, data: products });
     });
 
-    app.post('/book', async (req, res) => {
-      const book = req.body;
+    app.get('/categories', async (req, res) => {
+      const cursor = categoryCollection.find({}).sort({ publicationDate: -1 });
+      const categories = await cursor.toArray();
 
-      const result = await bookCollection.insertOne(book);
-
-      res.send(result);
+      res.send({ status: true, data: categories });
     });
 
-    app.get('/book/:id', async (req, res) => {
-      const id = req.params.id;
-      const result = await bookCollection.findOne({ _id: ObjectId(id) });
-      res.send(result);
+    app.get('/products/:category', async (req, res) => {
+      const category = req.params.category
+      const cursor = categoryCollection.find({ category }).sort({ publicationDate: -1 });
+      const products = await cursor.toArray();
+
+      res.send({ status: true, data: products });
     });
 
-    app.patch('/book/:id', async (req, res) => {
-      const id = req.params.id;
-      const updatedData = req.body
-      const result = await bookCollection.findOneAndUpdate({ _id: ObjectId(id) }, { $set: updatedData });
-      res.send(result);
-    });
+  } finally {
+  }
+};
 
-    app.delete('/book/:id', async (req, res) => {
-      const id = req.params.id;
+run().catch((err) => console.log(err));
 
-      const result = await bookCollection.deleteOne({ _id: ObjectId(id) });
-      res.send(result);
-    });
+app.get('/', (req, res) => {
+  res.send('Hello World!');
+});
 
-    app.post('/review/:id', async (req, res) => {
+app.listen(port, () => {
+  console.log(`Example app listening on port ${port}`);
+});
+
+  // Reviews API
+/*     app.post('/review/:id', async (req, res) => {
       const bookId = req.params.id;
       const review = req.body;
 
@@ -121,125 +122,4 @@ const run = async () => {
       }
 
       res.status(404).json({ error: 'Book not found' });
-    });
-
-    app.post('/wishlist', async (req, res) => {
-      const { userEmail, book } = req.body;
-      const payload = { userEmail, books: [book] }
-
-      let result
-      const exist = await wishlistCollection.findOne({ userEmail })
-      if (exist)
-        result = await wishlistCollection.findOneAndUpdate({ userEmail }, { $push: { books: book } })
-      else
-        result = await wishlistCollection.insertOne(payload);
-
-      res.json({ message: 'Wishlist added successfully', result: result.value });
-    });
-
-    app.get('/wishlist/:email', async (req, res) => {
-      const userEmail = req.params.email;
-      const result = await wishlistCollection.findOne({ userEmail });
-
-      if (result) {
-        return res.json(result);
-      }
-
-      res.status(404).json({ error: 'Book not found' });
-
-    });
-
-    // ToDo: Fix This!
-    app.delete('/wishlist/:email/book/:bookId', async (req, res) => {
-      const userEmail = req.params.email;
-      const bookId = req.params.bookId;
-      console.log(bookId)
-      const result = await wishlistCollection.findOneAndUpdate(
-        { userEmail },
-        { $pull: { books: { _id: ObjectId(bookId) } } }
-      );
-
-      if (result) {
-        return res.json(result);
-      }
-
-      res.status(404).json({ error: 'Book not found' });
-
-    });
-
-    app.post('/readinglist', async (req, res) => {
-      const { userEmail, book } = req.body;
-      const bookData = { ...book, completedReading: false }
-      const payload = { userEmail, readingPlan: [bookData] }
-
-      let result
-      const exist = await readlistCollection.findOne({ userEmail })
-      if (exist)
-        result = await readlistCollection.findOneAndUpdate({ userEmail }, { $push: { readingPlan: bookData } })
-      else
-        result = await readlistCollection.insertOne(payload);
-
-      res.json({ message: 'Book added to Reading List successfully', result: result.value });
-    });
-
-    app.get('/readinglist/:email', async (req, res) => {
-      const userEmail = req.params.email;
-      const result = await readlistCollection.findOne({ userEmail });
-
-      if (result) {
-        return res.json(result);
-      }
-
-      res.status(404).json({ error: 'Book not found' });
-
-    });
-
-    app.patch('/readinglist/:email/book/:bookId', async (req, res) => {
-      const userEmail = req.params.email;
-      const bookId = req.params.bookId;
-
-      const result = await readlistCollection.findOneAndUpdate(
-        { userEmail, "readingPlan._id": bookId },
-        { $set: { "readingPlan.$.completedReading": true } }
-      );
-
-      if (result) {
-        return res.json(result);
-      }
-
-      res.status(404).json({ error: 'Book not found' });
-
-    });
-
-    app.post('/user', async (req, res) => {
-      const user = req.body;
-
-      const result = await userCollection.insertOne(user);
-
-      res.send(result);
-    });
-
-    app.get('/user/:email', async (req, res) => {
-      const email = req.params.email;
-
-      const result = await userCollection.findOne({ email });
-
-      if (result?.email) {
-        return res.send({ status: true, data: result });
-      }
-
-      res.send({ status: false });
-    });
-  } finally {
-  }
-};
-
-run().catch((err) => console.log(err));
-
-app.get('/', (req, res) => {
-  res.send('Hello World!');
-});
-
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`);
-});
+    }); */
