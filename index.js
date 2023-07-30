@@ -28,6 +28,13 @@ const run = async () => {
       res.send({ status: true, data: products });
     });
 
+    app.get('/products/:id', async (req, res) => {
+      const id = req.params.id
+      const products = await productCollection.findOne({ _id: ObjectId(id) })
+
+      res.send({ status: true, data: products });
+    });
+
     app.get('/categories', async (req, res) => {
       const cursor = categoryCollection.find({}).sort({ publicationDate: -1 });
       const categories = await cursor.toArray();
@@ -35,9 +42,9 @@ const run = async () => {
       res.send({ status: true, data: categories });
     });
 
-    app.get('/products/:category', async (req, res) => {
+    app.get('/productsByCategory/:category', async (req, res) => {
       const category = req.params.category
-      const cursor = categoryCollection.find({ category }).sort({ publicationDate: -1 });
+      const cursor = productCollection.find({ category }).sort({ publicationDate: -1 });
       const products = await cursor.toArray();
 
       res.send({ status: true, data: products });
